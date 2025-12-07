@@ -23,7 +23,7 @@ import {
 } from '../data/mockData'
 
 const STORAGE_KEY = 'admitio_data'
-const STORAGE_VERSION = '2.3' // Incrementar cuando cambie la estructura
+const STORAGE_VERSION = '2.4' // Incrementar cuando cambie la estructura
 
 // ============================================
 // INICIALIZACIÓN

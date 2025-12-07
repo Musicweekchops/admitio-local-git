@@ -555,6 +555,10 @@ export default function Dashboard() {
   const [embedCode, setEmbedCode] = useState('')
   const [notification, setNotification] = useState(null)
   
+  // Estados para sidebar responsive
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  
   const [formFormData, setFormFormData] = useState({
     nombre: '',
     descripcion: '',
@@ -641,133 +645,174 @@ export default function Dashboard() {
   }
 
   // ============================================
-  // SIDEBAR
+  // SIDEBAR - Responsive y Colapsable
   // ============================================
-  const Sidebar = () => (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-100 flex flex-col z-40">
-      <div className="p-4">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold">P</span>
-          </div>
-          <div>
-            <p className="font-bold text-slate-800">PROJAZZ</p>
-            <p className="text-xs text-slate-400">Sistema de Admisión</p>
-          </div>
-        </div>
+  const Sidebar = () => {
+    const navItems = [
+      { id: 'dashboard', icon: 'Home', label: 'Dashboard', show: !isRector },
+      { id: 'consultas', icon: 'Users', label: 'Consultas', show: !isRector, badge: consultas.filter(c => c.estado === 'nueva').length },
+      { id: 'historial', icon: 'Archive', label: 'Historial', show: !isRector },
+      { id: 'reportes', icon: 'BarChart', label: isRector ? 'Dashboard' : 'Reportes', show: isKeyMaster || isRector || isEncargado || user?.rol_id === 'superadmin' },
+      { id: 'formularios', icon: 'FileCode', label: 'Formularios', show: isKeyMaster || user?.rol_id === 'superadmin' },
+      { id: 'usuarios', icon: 'User', label: 'Usuarios', show: isKeyMaster || user?.rol_id === 'superadmin' },
+      { id: 'config', icon: 'Upload', label: 'Importar', show: isKeyMaster || user?.rol_id === 'superadmin' },
+    ]
+    
+    const handleNavClick = (tabId) => {
+      setActiveTab(tabId)
+      setSelectedConsulta(null)
+      if (tabId === 'dashboard') setFilterEstado('todos')
+      setMobileMenuOpen(false) // Cerrar en mobile
+    }
+    
+    return (
+      <>
+        {/* Overlay para mobile */}
+        {mobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
         
-        <nav className="space-y-1">
-          {!isRector && (
-            <button onClick={() => { setActiveTab('dashboard'); setSelectedConsulta(null); setFilterEstado('todos'); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <Icon name="Home" size={20} />
-              <span className="font-medium">Dashboard</span>
-            </button>
-          )}
-          
-          {!isRector && (
-            <button onClick={() => { setActiveTab('consultas'); setSelectedConsulta(null); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'consultas' || activeTab === 'detalle' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <Icon name="Users" size={20} />
-              <span className="font-medium">Consultas</span>
-              {consultas.filter(c => c.estado === 'nueva').length > 0 && (
-                <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                  {consultas.filter(c => c.estado === 'nueva').length}
-                </span>
-              )}
-            </button>
-          )}
-          
-          {!isRector && (
-            <button onClick={() => { setActiveTab('historial'); setSelectedConsulta(null); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'historial' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <Icon name="Archive" size={20} />
-              <span className="font-medium">Historial</span>
-            </button>
-          )}
-          
-          {(isKeyMaster || isRector || isEncargado || user?.rol_id === 'superadmin') && (
-            <button onClick={() => { setActiveTab('reportes'); setSelectedConsulta(null); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'reportes' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <Icon name="BarChart" size={20} />
-              <span className="font-medium">{isRector ? 'Dashboard' : 'Reportes'}</span>
-            </button>
-          )}
-          
-          {(isKeyMaster || user?.rol_id === 'superadmin') && (
-            <>
-              <button onClick={() => { setActiveTab('formularios'); setSelectedConsulta(null); }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'formularios' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-                <Icon name="FileCode" size={20} />
-                <span className="font-medium">Formularios</span>
-              </button>
-              <button onClick={() => { setActiveTab('usuarios'); setSelectedConsulta(null); }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'usuarios' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-                <Icon name="User" size={20} />
-                <span className="font-medium">Usuarios</span>
-              </button>
-              <button onClick={() => { setActiveTab('config'); setSelectedConsulta(null); }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'config' ? 'bg-violet-50 text-violet-600' : 'text-slate-600 hover:bg-slate-50'}`}>
-                <Icon name="Upload" size={20} />
-                <span className="font-medium">Importar Datos</span>
-              </button>
-            </>
-          )}
-        </nav>
-      </div>
-      
-      {/* Stats rápidos */}
-      {!isRector && metricas && (
-        <div className="mt-auto p-4">
-          <div className="p-4 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl">
-            <p className="text-sm text-slate-600 mb-2">Mi rendimiento</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Asignados</span>
-                <span className="font-bold">{metricas.total}</span>
+        {/* Sidebar */}
+        <div className={`
+          fixed left-0 top-0 h-full bg-white border-r border-slate-100 flex flex-col z-50
+          transition-all duration-300 ease-in-out
+          ${sidebarCollapsed ? 'w-20' : 'w-64'}
+          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}>
+          {/* Header con logo */}
+          <div className="p-4">
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} mb-6`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold">P</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Matriculados</span>
-                <span className="font-bold text-emerald-600">{metricas.matriculados}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Conversión</span>
-                <span className="font-bold text-violet-600">{metricas.tasaConversion}%</span>
-              </div>
-              {metricas.tiempoRespuestaPromedio !== null && metricas.tiempoRespuestaPromedio !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">T. Respuesta</span>
-                  <span className={`font-bold ${metricas.tiempoRespuestaPromedio <= 4 ? 'text-emerald-600' : metricas.tiempoRespuestaPromedio <= 8 ? 'text-amber-600' : 'text-red-600'}`}>
-                    {metricas.tiempoRespuestaPromedio}h
-                  </span>
-                </div>
-              )}
-              {metricas.tiempoCierrePromedio !== null && metricas.tiempoCierrePromedio !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">T. Cierre</span>
-                  <span className="font-bold text-blue-600">{metricas.tiempoCierrePromedio}d</span>
+              {!sidebarCollapsed && (
+                <div className="overflow-hidden">
+                  <p className="font-bold text-slate-800">PROJAZZ</p>
+                  <p className="text-xs text-slate-400">Sistema de Admisión</p>
                 </div>
               )}
             </div>
+            
+            {/* Botón colapsar - solo desktop */}
+            <button 
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden lg:flex w-full items-center justify-center p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg mb-4 transition-colors"
+              title={sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+            >
+              <Icon name={sidebarCollapsed ? 'ChevronRight' : 'ChevronLeft'} size={20} />
+            </button>
+            
+            {/* Navegación */}
+            <nav className="space-y-1">
+              {navItems.filter(item => item.show).map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`
+                    w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all
+                    ${sidebarCollapsed ? 'justify-center' : ''}
+                    ${activeTab === item.id || (item.id === 'consultas' && activeTab === 'detalle') 
+                      ? 'bg-violet-50 text-violet-600' 
+                      : 'text-slate-600 hover:bg-slate-50'}
+                  `}
+                  title={sidebarCollapsed ? item.label : ''}
+                >
+                  <Icon name={item.icon} size={20} />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="font-medium">{item.label}</span>
+                      {item.badge > 0 && (
+                        <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {sidebarCollapsed && item.badge > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </button>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Stats rápidos - solo expandido */}
+          {!isRector && metricas && !sidebarCollapsed && (
+            <div className="mt-auto p-4">
+              <div className="p-4 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl">
+                <p className="text-sm text-slate-600 mb-2">Mi rendimiento</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Asignados</span>
+                    <span className="font-bold">{metricas.total}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Matriculados</span>
+                    <span className="font-bold text-emerald-600">{metricas.matriculados}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Conversión</span>
+                    <span className="font-bold text-violet-600">{metricas.tasaConversion}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* User info */}
+          <div className="p-4 border-t border-slate-100">
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-slate-600 font-medium">{user?.nombre?.charAt(0)}</span>
+              </div>
+              {!sidebarCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-800 truncate">{user?.nombre}</p>
+                  <p className="text-xs text-slate-400">{user?.rol?.nombre}</p>
+                </div>
+              )}
+              <button 
+                onClick={handleLogout} 
+                className={`p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg ${sidebarCollapsed ? 'mt-2' : ''}`}
+                title="Cerrar sesión"
+              >
+                <Icon name="LogOut" size={18} />
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      </>
+    )
+  }
+  
+  // ============================================
+  // MOBILE HEADER
+  // ============================================
+  const MobileHeader = () => (
+    <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 z-30">
+      <button 
+        onClick={() => setMobileMenuOpen(true)}
+        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+      >
+        <Icon name="Menu" size={24} />
+      </button>
       
-      {/* User info */}
-      <div className="p-4 border-t border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-            <span className="text-slate-600 font-medium">{user?.nombre?.charAt(0)}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-slate-800 truncate">{user?.nombre}</p>
-            <p className="text-xs text-slate-400">{user?.rol?.nombre}</p>
-          </div>
-          <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
-            <Icon name="LogOut" size={18} />
-          </button>
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+          <span className="text-white font-bold text-sm">P</span>
         </div>
+        <span className="font-bold text-slate-800">PROJAZZ</span>
       </div>
+      
+      <button 
+        onClick={() => setShowModal(true)}
+        className="p-2 text-violet-600 hover:bg-violet-50 rounded-lg"
+      >
+        <Icon name="Plus" size={24} />
+      </button>
     </div>
   )
 
@@ -3694,8 +3739,19 @@ export default function Dashboard() {
   
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Mobile Header */}
+      <MobileHeader />
+      
+      {/* Sidebar */}
       <Sidebar />
-      <div className="ml-64 p-8">
+      
+      {/* Contenido principal - responsive */}
+      <div className={`
+        transition-all duration-300
+        pt-16 lg:pt-0
+        ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
+        p-4 lg:p-8
+      `}>
         {activeTab === 'dashboard' && <DashboardView />}
         {activeTab === 'consultas' && <ConsultasView />}
         {activeTab === 'detalle' && <DetalleView />}
