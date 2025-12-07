@@ -348,8 +348,8 @@ const ModalNuevaConsulta = ({ isOpen, onClose, onCreated, isKeyMaster, userId, u
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-slate-800">Nueva Consulta</h3>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">
-            <Icon name="X" size={24} />
+          <button onClick={handleClose} className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-colors">
+            <Icon name="X" size={20} />
           </button>
         </div>
         
@@ -684,25 +684,44 @@ export default function Dashboard() {
         `}>
           {/* Header con logo */}
           <div className="p-4">
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} mb-6`}>
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold">P</span>
-              </div>
-              {!sidebarCollapsed && (
-                <div className="overflow-hidden">
-                  <p className="font-bold text-slate-800">PROJAZZ</p>
-                  <p className="text-xs text-slate-400">Sistema de Admisión</p>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
+              <div className={`flex items-center ${sidebarCollapsed ? '' : 'gap-3'}`}>
+                <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold">P</span>
                 </div>
+                {!sidebarCollapsed && (
+                  <div className="overflow-hidden">
+                    <p className="font-bold text-slate-800">PROJAZZ</p>
+                    <p className="text-xs text-slate-400">Sistema de Admisión</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Botón cerrar - solo mobile */}
+              {!sidebarCollapsed && (
+                <button 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="lg:hidden p-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+                  title="Cerrar menú"
+                >
+                  <Icon name="X" size={20} />
+                </button>
               )}
             </div>
             
-            {/* Botón colapsar - solo desktop */}
+            {/* Botón colapsar - solo desktop - VISIBLE */}
             <button 
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex w-full items-center justify-center p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg mb-4 transition-colors"
+              className={`
+                hidden lg:flex w-full items-center justify-center gap-2 p-3 rounded-xl mb-4 transition-all font-medium
+                ${sidebarCollapsed 
+                  ? 'bg-violet-700 text-white hover:bg-violet-800' 
+                  : 'bg-violet-100 text-violet-700 hover:bg-violet-200 border-2 border-violet-300'}
+              `}
               title={sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'}
             >
               <Icon name={sidebarCollapsed ? 'ChevronRight' : 'ChevronLeft'} size={20} />
+              {!sidebarCollapsed && <span className="text-sm">Colapsar</span>}
             </button>
             
             {/* Navegación */}
@@ -2703,7 +2722,7 @@ export default function Dashboard() {
             <div className="bg-slate-100 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-slate-800">Preview: {previewForm.nombre}</h3>
-                <button onClick={() => setPreviewForm(null)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setPreviewForm(null)} className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-colors">
                   <Icon name="X" size={24} />
                 </button>
               </div>
@@ -2718,7 +2737,7 @@ export default function Dashboard() {
             <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-slate-800">Código para Embeber</h3>
-                <button onClick={() => setShowCode(null)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setShowCode(null)} className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-colors">
                   <Icon name="X" size={24} />
                 </button>
               </div>
@@ -3124,7 +3143,7 @@ export default function Dashboard() {
                 <h3 className="text-xl font-bold text-slate-800">
                   {localEditingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
                 </h3>
-                <button onClick={() => setLocalShowUserModal(false)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setLocalShowUserModal(false)} className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-colors">
                   <Icon name="X" size={24} />
                 </button>
               </div>
@@ -3787,8 +3806,8 @@ export default function Dashboard() {
                     <p className="text-slate-500 text-sm">{leadsHoy.length} lead{leadsHoy.length !== 1 ? 's' : ''} requiere{leadsHoy.length === 1 ? '' : 'n'} tu atención</p>
                   </div>
                 </div>
-                <button onClick={() => setShowLeadsHoyModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <Icon name="X" size={24} />
+                <button onClick={() => setShowLeadsHoyModal(false)} className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-colors">
+                  <Icon name="X" size={20} />
                 </button>
               </div>
             </div>
