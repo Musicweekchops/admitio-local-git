@@ -3888,7 +3888,7 @@ const ConfigView = () => {
 // ============================================
 // CSS para la animación (agregar a tu CSS global o en un style tag)
 // ============================================
-/*
+*/
 @keyframes bounce-in {
   0% {
     opacity: 0;
@@ -3909,7 +3909,7 @@ const ConfigView = () => {
 .animate-bounce-in {
   animation: bounce-in 0.5s ease-out;
 }
-
+*/
   // ============================================
   // COMPONENTES AUXILIARES
   // ============================================
