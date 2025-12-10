@@ -1862,49 +1862,171 @@ export function exportarReporteCSV(leads, incluirDetalles = false) {
 // IMPORTACIÓN DE DATOS
 // ============================================
 export function importarLeadsCSV(csvData, userId, mapeoColumnas = {}) {
-  const lineas = csvData.split('\n').filter(l => l.trim())
-  if (lineas.length < 2) return { success: false, error: 'CSV vacío o sin datos' }
+  console.log('📥 Iniciando importación de CSV...')
   
-  const headers = lineas[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''))
-  const resultados = { importados: 0, errores: [], duplicados: 0 }
+  // Normalizar saltos de línea y filtrar vacías
+  const lineas = csvData
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .filter(l => l.trim())
   
-  // Mapeo por defecto
-  const mapeo = {
-    nombre: mapeoColumnas.nombre || headers.findIndex(h => h.includes('nombre')),
-    email: mapeoColumnas.email || headers.findIndex(h => h.includes('email') || h.includes('correo')),
-    telefono: mapeoColumnas.telefono || headers.findIndex(h => h.includes('telefono') || h.includes('celular') || h.includes('fono')),
-    carrera: mapeoColumnas.carrera || headers.findIndex(h => h.includes('carrera') || h.includes('instrumento')),
-    notas: mapeoColumnas.notas || headers.findIndex(h => h.includes('nota') || h.includes('comentario') || h.includes('observacion'))
+  if (lineas.length < 2) {
+    console.error('❌ CSV vacío o sin datos')
+    return { success: false, error: 'El archivo está vacío o no tiene datos' }
   }
   
+  // Parsear headers
+  const headers = parseCSVLine(lineas[0]).map(h => 
+    h.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+      .replace(/[^a-z0-9]/g, '') // Solo alfanumérico
+  )
+  
+  console.log('📋 Headers detectados:', headers)
+  
+  // Mapeo inteligente de columnas
+  const findColumn = (keywords) => {
+    for (const kw of keywords) {
+      const idx = headers.findIndex(h => h.includes(kw))
+      if (idx !== -1) return idx
+    }
+    return -1
+  }
+  
+  const mapeo = {
+    nombre: mapeoColumnas.nombre ?? findColumn(['nombre', 'name', 'contacto', 'cliente']),
+    email: mapeoColumnas.email ?? findColumn(['email', 'correo', 'mail']),
+    telefono: mapeoColumnas.telefono ?? findColumn(['telefono', 'celular', 'fono', 'movil', 'phone', 'tel']),
+    carrera: mapeoColumnas.carrera ?? findColumn(['carrera', 'instrumento', 'curso', 'programa', 'interes']),
+    notas: mapeoColumnas.notas ?? findColumn(['nota', 'comentario', 'observacion', 'detalle', 'mensaje'])
+  }
+  
+  console.log('🗺️ Mapeo de columnas:', mapeo)
+  
+  // Validar que al menos tengamos nombre
+  if (mapeo.nombre === -1) {
+    return { 
+      success: false, 
+      error: 'No se encontró columna de "nombre". Asegúrate de que tu CSV tenga una columna llamada "nombre".' 
+    }
+  }
+  
+  const resultados = { 
+    importados: 0, 
+    errores: [], 
+    duplicados: 0,
+    detalles: []
+  }
+  
+  // Procesar cada línea
   for (let i = 1; i < lineas.length; i++) {
     try {
-      const valores = lineas[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || []
-      const limpiar = (v) => v ? v.replace(/^"|"$/g, '').trim() : ''
+      const valores = parseCSVLine(lineas[i])
       
-      const nombre = limpiar(valores[mapeo.nombre])
-      const email = limpiar(valores[mapeo.email])
-      const telefono = limpiar(valores[mapeo.telefono])
+      // Extraer valores con validación de índice
+      const getValue = (idx) => {
+        if (idx === -1 || idx >= valores.length) return ''
+        return valores[idx]?.replace(/^["']|["']$/g, '').trim() || ''
+      }
       
-      if (!nombre) {
-        resultados.errores.push(`Línea ${i + 1}: Nombre vacío`)
+      const nombre = getValue(mapeo.nombre)
+      const email = getValue(mapeo.email)
+      const telefono = getValue(mapeo.telefono)
+      const carreraTexto = getValue(mapeo.carrera)
+      const notas = getValue(mapeo.notas)
+      
+      // Validar nombre
+      if (!nombre || nombre.length < 2) {
+        resultados.errores.push(`Línea ${i + 1}: Nombre vacío o inválido`)
         continue
       }
       
-      // Verificar duplicado
-      const duplicados = buscarDuplicados(nombre, email, telefono)
-      if (duplicados.length > 0) {
-        resultados.duplicados++
-        resultados.errores.push(`Línea ${i + 1}: Posible duplicado de "${duplicados[0].nombre}"`)
-        continue
+      // Verificar duplicado por email o teléfono (más confiable que nombre)
+      let esDuplicado = false
+      if (email) {
+        const existeEmail = store.consultas.find(c => 
+          c.email?.toLowerCase() === email.toLowerCase()
+        )
+        if (existeEmail) {
+          esDuplicado = true
+          resultados.duplicados++
+          resultados.errores.push(`Línea ${i + 1}: Email "${email}" ya existe (${existeEmail.nombre})`)
+          continue
+        }
       }
       
-      // Buscar carrera
-      const carreraTexto = limpiar(valores[mapeo.carrera])
-      const carrera = store.carreras.find(c => 
-        c.nombre.toLowerCase().includes(carreraTexto.toLowerCase()) ||
-        carreraTexto.toLowerCase().includes(c.nombre.toLowerCase())
-      )
+      if (telefono && !esDuplicado) {
+        const telLimpio = telefono.replace(/\D/g, '')
+        if (telLimpio.length >= 8) {
+          const existeTel = store.consultas.find(c => 
+            c.telefono?.replace(/\D/g, '') === telLimpio
+          )
+          if (existeTel) {
+            esDuplicado = true
+            resultados.duplicados++
+            resultados.errores.push(`Línea ${i + 1}: Teléfono "${telefono}" ya existe (${existeTel.nombre})`)
+            continue
+          }
+        }
+      }
+      
+      // Buscar carrera que coincida
+      let carrera_id = store.carreras[0]?.id // Default a primera carrera
+      if (carreraTexto) {
+        const carreraTextoNorm = carreraTexto.toLowerCase()
+        const carreraEncontrada = store.carreras.find(c => 
+          c.nombre.toLowerCase().includes(carreraTextoNorm) ||
+          carreraTextoNorm.includes(c.nombre.toLowerCase())
+        )
+        if (carreraEncontrada) {
+          carrera_id = carreraEncontrada.id
+        }
+      }
+      
+      // Buscar medio "otro" o usar el primero
+      let medio_id = store.medios.find(m => 
+        m.id === 'otro' || 
+        m.nombre.toLowerCase() === 'otro' ||
+        m.nombre.toLowerCase().includes('import')
+      )?.id || store.medios[0]?.id
+      
+      // Crear el lead
+      const nuevoLead = createConsulta({
+        nombre,
+        email: email || '',
+        telefono: telefono || '',
+        carrera_id,
+        medio_id,
+        tipo_alumno: 'nuevo',
+        notas: notas || `Importado desde CSV`,
+        origen_entrada: 'importacion'
+      }, userId, 'keymaster')
+      
+      resultados.importados++
+      resultados.detalles.push({
+        linea: i + 1,
+        nombre,
+        id: nuevoLead.id
+      })
+      
+      console.log(`✅ Línea ${i + 1}: ${nombre} importado`)
+      
+    } catch (err) {
+      console.error(`❌ Error en línea ${i + 1}:`, err)
+      resultados.errores.push(`Línea ${i + 1}: Error de formato - ${err.message}`)
+    }
+  }
+  
+  console.log('📊 Resultado importación:', {
+    importados: resultados.importados,
+    duplicados: resultados.duplicados,
+    errores: resultados.errores.length
+  })
+  
+  return { success: true, ...resultados }
+}
       
       // Crear lead
       createConsulta({
