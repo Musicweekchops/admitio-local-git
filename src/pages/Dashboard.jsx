@@ -3308,236 +3308,607 @@ export default function Dashboard() {
   // ============================================
   // CONFIG VIEW
   // ============================================
-  const ConfigView = () => {
-    const [importFile, setImportFile] = useState(null)
-    const [importResult, setImportResult] = useState(null)
-    const [importing, setImporting] = useState(false)
+  // ============================================
+// CONFIG VIEW - Con Historial de Importaciones
+// Reemplaza la función ConfigView en tu Dashboard.jsx
+// ============================================
+
+const ConfigView = () => {
+  const [importFile, setImportFile] = useState(null)
+  const [importResult, setImportResult] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [historialImportaciones, setHistorialImportaciones] = useState([])
+  const [estadisticasImport, setEstadisticasImport] = useState(null)
+  const [selectedImportacion, setSelectedImportacion] = useState(null)
+  
+  // Cargar historial al montar
+  useEffect(() => {
+    cargarHistorial()
+  }, [])
+  
+  const cargarHistorial = () => {
+    setHistorialImportaciones(store.getHistorialImportaciones(10))
+    setEstadisticasImport(store.getEstadisticasImportaciones())
+  }
+  
+  const handleImportCSV = async () => {
+    if (!importFile) return
     
-    const handleImportCSV = async () => {
-      if (!importFile) return
+    setImporting(true)
+    setImportResult(null)
+    
+    const reader = new FileReader()
+    
+    reader.onload = (e) => {
+      const csvData = e.target.result
+      const result = store.importarLeadsCSV(csvData, user?.id)
       
-      setImporting(true)
-      const reader = new FileReader()
+      setImportResult(result)
+      setImporting(false)
       
-      reader.onload = (e) => {
-        const csvData = e.target.result
-        const result = store.importarLeadsCSV(csvData, user?.id)
-        setImportResult(result)
-        setImporting(false)
-        if (result.success) {
-          loadData()
-        }
+      if (result.success && result.importados > 0) {
+        setShowSuccessModal(true)
+        cargarHistorial() // Actualizar historial
+        loadData() // Recargar datos del dashboard
       }
-      
-      reader.readAsText(importFile)
     }
     
-    const descargarPlantilla = () => {
-      const plantilla = `nombre,email,telefono,carrera,notas
+    reader.onerror = () => {
+      setImporting(false)
+      setImportResult({ success: false, error: 'Error al leer el archivo' })
+    }
+    
+    reader.readAsText(importFile)
+  }
+  
+  const descargarPlantilla = () => {
+    const plantilla = `nombre,email,telefono,carrera,notas
 "Juan Pérez","juan@email.com","+56912345678","Guitarra Eléctrica","Interesado en clases presenciales"
 "María García","maria@email.com","+56987654321","Canto Popular","Consulta por horarios"`
-      
-      const blob = new Blob([plantilla], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = 'plantilla_importacion_admitio.csv'
-      link.click()
-    }
     
-    return (
-      <div className="space-y-6">
-        {/* Header con ícono */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-              <Icon name="Upload" className="text-white" size={28} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Importar Base de Datos</h1>
-              <p className="text-blue-200">Carga tu Excel o CSV para comenzar rápidamente</p>
-            </div>
+    const blob = new Blob([plantilla], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'plantilla_importacion_admitio.csv'
+    link.click()
+  }
+  
+  const formatFechaHora = (fecha) => {
+    if (!fecha) return '-'
+    return new Date(fecha).toLocaleString('es-CL', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+  
+  return (
+    <div className="space-y-6">
+      {/* Header con ícono */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+            <Icon name="Upload" className="text-white" size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Importar Base de Datos</h1>
+            <p className="text-blue-200">Carga tu Excel o CSV para comenzar rápidamente</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Estadísticas de importaciones */}
+      {estadisticasImport && estadisticasImport.totalImportaciones > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+            <p className="text-slate-500 text-sm">Total Importaciones</p>
+            <p className="text-2xl font-bold text-slate-800">{estadisticasImport.totalImportaciones}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+            <p className="text-slate-500 text-sm">Leads Importados</p>
+            <p className="text-2xl font-bold text-emerald-600">{estadisticasImport.totalLeadsImportados}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+            <p className="text-slate-500 text-sm">Duplicados Detectados</p>
+            <p className="text-2xl font-bold text-amber-600">{estadisticasImport.totalDuplicados}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+            <p className="text-slate-500 text-sm">Última Importación</p>
+            <p className="text-sm font-medium text-slate-800">
+              {estadisticasImport.ultimaImportacion 
+                ? formatFechaHora(estadisticasImport.ultimaImportacion.fecha)
+                : 'Nunca'}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Importación de Datos */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <Icon name="Upload" className="text-blue-600" size={20} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-800">Importar Base de Datos</h3>
+            <p className="text-sm text-slate-500">Carga masiva de leads desde un archivo CSV</p>
           </div>
         </div>
         
-        {/* Importación de Datos */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Icon name="Upload" className="text-blue-600" size={20} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-800">Importar Base de Datos</h3>
-              <p className="text-sm text-slate-500">Carga masiva de leads desde un archivo CSV</p>
-            </div>
-          </div>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-            <p className="text-sm text-blue-800 mb-2 font-medium">📋 Formato del archivo CSV:</p>
-            <ul className="text-sm text-blue-700 space-y-1 ml-4">
-              <li>• <strong>nombre</strong> (requerido): Nombre completo del lead</li>
-              <li>• <strong>email</strong>: Correo electrónico</li>
-              <li>• <strong>telefono</strong>: Número de teléfono</li>
-              <li>• <strong>carrera</strong>: Nombre del instrumento/carrera</li>
-              <li>• <strong>notas</strong>: Observaciones o comentarios</li>
-            </ul>
-            <button
-              onClick={descargarPlantilla}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-            >
-              <Icon name="Download" size={14} />
-              Descargar plantilla de ejemplo
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <label className="flex-1">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => setImportFile(e.target.files[0])}
-                className="hidden"
-              />
-              <div className="flex items-center gap-3 px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                <Icon name="File" className="text-slate-400" size={24} />
-                <div>
-                  <p className="font-medium text-slate-700">
-                    {importFile ? importFile.name : 'Seleccionar archivo CSV'}
-                  </p>
-                  <p className="text-xs text-slate-400">Click para seleccionar</p>
-                </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+          <p className="text-sm text-blue-800 mb-2 font-medium">📋 Formato del archivo CSV:</p>
+          <ul className="text-sm text-blue-700 space-y-1 ml-4">
+            <li>• <strong>nombre</strong> (requerido): Nombre completo del lead</li>
+            <li>• <strong>email</strong>: Correo electrónico</li>
+            <li>• <strong>telefono</strong>: Número de teléfono</li>
+            <li>• <strong>carrera</strong>: Nombre del instrumento/carrera</li>
+            <li>• <strong>notas</strong>: Observaciones o comentarios</li>
+          </ul>
+          <button
+            onClick={descargarPlantilla}
+            className="mt-3 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            <Icon name="Download" size={14} />
+            Descargar plantilla de ejemplo
+          </button>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <label className="flex-1">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                setImportFile(e.target.files[0])
+                setImportResult(null)
+              }}
+              className="hidden"
+            />
+            <div className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+              importFile 
+                ? 'border-blue-400 bg-blue-50' 
+                : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50'
+            }`}>
+              <Icon name={importFile ? "FileCheck" : "File"} className={importFile ? "text-blue-500" : "text-slate-400"} size={24} />
+              <div>
+                <p className="font-medium text-slate-700">
+                  {importFile ? importFile.name : 'Seleccionar archivo CSV'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {importFile ? `${(importFile.size / 1024).toFixed(1)} KB` : 'Click para seleccionar'}
+                </p>
               </div>
-            </label>
-            
-            <button
-              onClick={handleImportCSV}
-              disabled={!importFile || importing}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {importing ? (
+              {importFile && (
+                <button 
+                  onClick={(e) => { e.preventDefault(); setImportFile(null); setImportResult(null); }}
+                  className="ml-auto p-1 text-slate-400 hover:text-red-500"
+                >
+                  <Icon name="X" size={18} />
+                </button>
+              )}
+            </div>
+          </label>
+          
+          <button
+            onClick={handleImportCSV}
+            disabled={!importFile || importing}
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[140px] justify-center"
+          >
+            {importing ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Importando...
+              </>
+            ) : (
+              <>
+                <Icon name="Upload" size={20} />
+                Importar
+              </>
+            )}
+          </button>
+        </div>
+        
+        {/* Resultado de importación inline (cuando no es exitoso o hay errores) */}
+        {importResult && !showSuccessModal && (
+          <div className={`mt-4 p-4 rounded-xl ${
+            importResult.success 
+              ? importResult.importados === 0 
+                ? 'bg-amber-50 border border-amber-200' 
+                : 'bg-emerald-50 border border-emerald-200'
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            {importResult.success ? (
+              importResult.importados === 0 ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Importando...
+                  <p className="font-medium text-amber-800 flex items-center gap-2">
+                    <Icon name="AlertTriangle" size={20} />
+                    No se importaron leads
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    {importResult.duplicados > 0 
+                      ? `Todos los ${importResult.duplicados} registros ya existen en la base de datos.`
+                      : 'El archivo no contenía datos válidos para importar.'}
+                  </p>
                 </>
               ) : (
-                <>
-                  <Icon name="Upload" size={20} />
-                  Importar
-                </>
-              )}
-            </button>
-          </div>
-          
-          {/* Resultado de importación */}
-          {importResult && (
-            <div className={`mt-4 p-4 rounded-xl ${importResult.success ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
-              {importResult.success ? (
                 <>
                   <p className="font-medium text-emerald-800 flex items-center gap-2">
                     <Icon name="CheckCircle" size={20} />
                     Importación completada
                   </p>
-                  <div className="mt-2 text-sm text-emerald-700 space-y-1">
-                    <p>✓ {importResult.importados} leads importados correctamente</p>
-                    {importResult.duplicados > 0 && (
-                      <p>⚠️ {importResult.duplicados} posibles duplicados omitidos</p>
-                    )}
-                    {importResult.errores?.length > 0 && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-amber-700">
-                          Ver {importResult.errores.length} advertencias
-                        </summary>
-                        <ul className="mt-2 ml-4 text-xs text-slate-600 space-y-1">
-                          {importResult.errores.slice(0, 10).map((err, i) => (
-                            <li key={i}>{err}</li>
-                          ))}
-                          {importResult.errores.length > 10 && (
-                            <li>... y {importResult.errores.length - 10} más</li>
-                          )}
-                        </ul>
-                      </details>
-                    )}
+                  <div className="mt-2 text-sm text-emerald-700">
+                    <p>✓ {importResult.importados} leads importados</p>
+                    {importResult.duplicados > 0 && <p>⚠️ {importResult.duplicados} duplicados omitidos</p>}
                   </div>
                 </>
-              ) : (
-                <p className="text-red-800 flex items-center gap-2">
-                  <Icon name="AlertCircle" size={20} />
-                  Error: {importResult.error}
-                </p>
-              )}
+              )
+            ) : (
+              <p className="text-red-800 flex items-center gap-2">
+                <Icon name="AlertCircle" size={20} />
+                Error: {importResult.error}
+              </p>
+            )}
+            
+            {/* Mostrar errores detallados */}
+            {importResult.errores?.length > 0 && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-sm text-slate-600 hover:text-slate-800">
+                  Ver {importResult.errores.length} advertencia{importResult.errores.length !== 1 ? 's' : ''}
+                </summary>
+                <ul className="mt-2 ml-4 text-xs text-slate-600 space-y-1 max-h-32 overflow-y-auto">
+                  {importResult.errores.slice(0, 15).map((err, i) => (
+                    <li key={i} className="flex items-start gap-1">
+                      <Icon name="ChevronRight" size={12} className="mt-0.5 flex-shrink-0" />
+                      {err}
+                    </li>
+                  ))}
+                  {importResult.errores.length > 15 && (
+                    <li className="text-slate-400">... y {importResult.errores.length - 15} más</li>
+                  )}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Historial de Importaciones */}
+      {historialImportaciones.length > 0 && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+                <Icon name="History" className="text-violet-600" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800">Historial de Importaciones</h3>
+                <p className="text-sm text-slate-500">Últimas {historialImportaciones.length} importaciones realizadas</p>
+              </div>
             </div>
-          )}
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm text-slate-500 border-b border-slate-100">
+                  <th className="pb-3 font-medium">Fecha</th>
+                  <th className="pb-3 font-medium">Usuario</th>
+                  <th className="pb-3 font-medium text-center">Importados</th>
+                  <th className="pb-3 font-medium text-center">Duplicados</th>
+                  <th className="pb-3 font-medium text-center">Errores</th>
+                  <th className="pb-3 font-medium text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historialImportaciones.map((imp) => (
+                  <tr key={imp.id} className="border-b border-slate-50 hover:bg-slate-50">
+                    <td className="py-3">
+                      <p className="font-medium text-slate-800">{formatFechaHora(imp.fecha)}</p>
+                      <p className="text-xs text-slate-400">ID: {imp.id}</p>
+                    </td>
+                    <td className="py-3 text-slate-600">{imp.usuario_nombre}</td>
+                    <td className="py-3 text-center">
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                        {imp.importados}
+                      </span>
+                    </td>
+                    <td className="py-3 text-center">
+                      {imp.duplicados > 0 ? (
+                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                          {imp.duplicados}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-center">
+                      {imp.errores > 0 ? (
+                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                          {imp.errores}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-center">
+                      <button
+                        onClick={() => setSelectedImportacion(imp)}
+                        className="p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                        title="Ver detalles"
+                      >
+                        <Icon name="Eye" size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      
+      {/* Guía de migración */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+            <Icon name="HelpCircle" className="text-violet-600" size={20} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-800">Guía de Migración desde Excel/Google Sheets</h3>
+            <p className="text-sm text-slate-500">Pasos para importar tu base de datos existente</p>
+          </div>
         </div>
         
-        {/* Guía de migración */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
-              <Icon name="HelpCircle" className="text-violet-600" size={20} />
-            </div>
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold text-sm flex-shrink-0">1</div>
             <div>
-              <h3 className="font-semibold text-slate-800">Guía de Migración desde Excel/Google Sheets</h3>
-              <p className="text-sm text-slate-500">Pasos para importar tu base de datos existente</p>
+              <p className="font-medium text-slate-800">Prepara tu archivo</p>
+              <p className="text-sm text-slate-500">Abre tu Excel o Google Sheets y asegúrate de que la primera fila tenga los nombres de las columnas (nombre, email, telefono, etc.)</p>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold text-sm flex-shrink-0">1</div>
-              <div>
-                <p className="font-medium text-slate-800">Prepara tu archivo</p>
-                <p className="text-sm text-slate-500">Abre tu Excel o Google Sheets y asegúrate de que la primera fila tenga los nombres de las columnas (nombre, email, telefono, etc.)</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold text-sm flex-shrink-0">2</div>
-              <div>
-                <p className="font-medium text-slate-800">Exporta a CSV</p>
-                <p className="text-sm text-slate-500">En Excel: Archivo → Guardar como → CSV. En Google Sheets: Archivo → Descargar → CSV (.csv)</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold text-sm flex-shrink-0">3</div>
-              <div>
-                <p className="font-medium text-slate-800">Sube el archivo</p>
-                <p className="text-sm text-slate-500">Usa el botón de arriba para seleccionar tu archivo CSV y haz click en "Importar"</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 font-bold text-sm flex-shrink-0">✓</div>
-              <div>
-                <p className="font-medium text-slate-800">Revisa los resultados</p>
-                <p className="text-sm text-slate-500">El sistema detectará automáticamente duplicados y te mostrará un resumen de la importación</p>
-              </div>
+          <div className="flex gap-4">
+            <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold text-sm flex-shrink-0">2</div>
+            <div>
+              <p className="font-medium text-slate-800">Exporta a CSV</p>
+              <p className="text-sm text-slate-500">En Excel: Archivo → Guardar como → CSV. En Google Sheets: Archivo → Descargar → CSV (.csv)</p>
             </div>
           </div>
           
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-sm text-amber-800">
-              <strong>💡 Tip:</strong> Si tus columnas tienen nombres diferentes (ej: "Nombre Completo" en vez de "nombre"), el sistema intentará reconocerlas automáticamente. Si no funciona, renombra las columnas en tu archivo original.
-            </p>
+          <div className="flex gap-4">
+            <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-bold text-sm flex-shrink-0">3</div>
+            <div>
+              <p className="font-medium text-slate-800">Sube el archivo</p>
+              <p className="text-sm text-slate-500">Usa el botón de arriba para seleccionar tu archivo CSV y haz click en "Importar"</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-4">
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 font-bold text-sm flex-shrink-0">✓</div>
+            <div>
+              <p className="font-medium text-slate-800">Revisa los resultados</p>
+              <p className="text-sm text-slate-500">El sistema detectará automáticamente duplicados y te mostrará un resumen de la importación</p>
+            </div>
           </div>
         </div>
-  
-        {/* Reset de datos */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-800 mb-4 text-red-600 flex items-center gap-2">
-            <Icon name="AlertTriangle" size={20} />
-            Zona de Peligro
-          </h3>
-          <p className="text-slate-500 mb-4">Resetear la base de datos a los datos iniciales de prueba. Esta acción eliminará todos los leads y actividad actual.</p>
-          <button 
-            onClick={() => { if(confirm('¿Estás seguro? Esta acción eliminará TODOS los datos actuales y no se puede deshacer.')) { store.resetStore(); loadData(); setNotification({ type: 'info', message: 'Datos reseteados' }); setTimeout(() => setNotification(null), 2000); }}}
-            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 flex items-center gap-2 border border-red-200"
-          >
-            <Icon name="RefreshCw" size={20} /> Resetear Datos
-          </button>
+        
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-sm text-amber-800">
+            <strong>💡 Tip:</strong> Si tus columnas tienen nombres diferentes (ej: "Nombre Completo" en vez de "nombre"), el sistema intentará reconocerlas automáticamente. Si no funciona, renombra las columnas en tu archivo original.
+          </p>
         </div>
       </div>
-    )
+
+      {/* Reset de datos */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+        <h3 className="font-semibold text-slate-800 mb-4 text-red-600 flex items-center gap-2">
+          <Icon name="AlertTriangle" size={20} />
+          Zona de Peligro
+        </h3>
+        <p className="text-slate-500 mb-4">Resetear la base de datos a los datos iniciales de prueba. Esta acción eliminará todos los leads y actividad actual.</p>
+        <button 
+          onClick={() => { 
+            if(confirm('¿Estás seguro? Esta acción eliminará TODOS los datos actuales y no se puede deshacer.')) { 
+              store.resetStore(); 
+              loadData(); 
+              cargarHistorial();
+              setNotification({ type: 'info', message: 'Datos reseteados' }); 
+              setTimeout(() => setNotification(null), 2000); 
+            }
+          }}
+          className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 flex items-center gap-2 border border-red-200"
+        >
+          <Icon name="RefreshCw" size={20} /> Resetear Datos
+        </button>
+      </div>
+      
+      {/* ============================================ */}
+      {/* MODAL DE ÉXITO - Aparece cuando importa bien */}
+      {/* ============================================ */}
+      {showSuccessModal && importResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSuccessModal(false)}>
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md text-center animate-bounce-in" onClick={e => e.stopPropagation()}>
+            {/* Icono animado */}
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <Icon name="CheckCircle" className="text-emerald-600" size={48} />
+            </div>
+            
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">¡Importación Exitosa!</h3>
+            <p className="text-slate-500 mb-6">Los leads han sido agregados a tu base de datos</p>
+            
+            {/* Estadísticas */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-emerald-50 rounded-xl p-4">
+                <p className="text-3xl font-bold text-emerald-600">{importResult.importados}</p>
+                <p className="text-sm text-emerald-700">Importados</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-4">
+                <p className="text-3xl font-bold text-amber-600">{importResult.duplicados}</p>
+                <p className="text-sm text-amber-700">Duplicados</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-3xl font-bold text-slate-600">{importResult.errores?.length || 0}</p>
+                <p className="text-sm text-slate-700">Errores</p>
+              </div>
+            </div>
+            
+            {/* Info del registro */}
+            {importResult.registro && (
+              <div className="text-sm text-slate-500 mb-6 p-3 bg-slate-50 rounded-lg">
+                <p>Registro: <span className="font-mono text-xs">{importResult.registro.id}</span></p>
+                <p>Fecha: {formatFechaHora(importResult.registro.fecha)}</p>
+              </div>
+            )}
+            
+            {/* Botones */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false)
+                  setImportFile(null)
+                  setImportResult(null)
+                }}
+                className="flex-1 px-4 py-3 border border-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-50"
+              >
+                Importar Otro
+              </button>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false)
+                  setActiveTab('consultas')
+                }}
+                className="flex-1 px-4 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 flex items-center justify-center gap-2"
+              >
+                <Icon name="Users" size={18} />
+                Ver Leads
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ============================================ */}
+      {/* MODAL DE DETALLES DE IMPORTACIÓN */}
+      {/* ============================================ */}
+      {selectedImportacion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedImportacion(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">Detalles de Importación</h3>
+                  <p className="text-slate-500 text-sm">{formatFechaHora(selectedImportacion.fecha)}</p>
+                </div>
+                <button onClick={() => setSelectedImportacion(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+                  <Icon name="X" size={24} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+              {/* Resumen */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-slate-700">{selectedImportacion.total_procesados}</p>
+                  <p className="text-xs text-slate-500">Procesados</p>
+                </div>
+                <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{selectedImportacion.importados}</p>
+                  <p className="text-xs text-emerald-700">Importados</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-amber-600">{selectedImportacion.duplicados}</p>
+                  <p className="text-xs text-amber-700">Duplicados</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-red-600">{selectedImportacion.errores}</p>
+                  <p className="text-xs text-red-700">Errores</p>
+                </div>
+              </div>
+              
+              {/* Info */}
+              <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm"><strong>Usuario:</strong> {selectedImportacion.usuario_nombre}</p>
+                <p className="text-sm"><strong>ID:</strong> <span className="font-mono text-xs">{selectedImportacion.id}</span></p>
+              </div>
+              
+              {/* Leads importados */}
+              {selectedImportacion.leads_creados?.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <Icon name="UserPlus" size={18} className="text-emerald-500" />
+                    Leads Importados ({selectedImportacion.leads_creados.length})
+                  </h4>
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {selectedImportacion.leads_creados.map((lead, i) => (
+                          <tr key={lead.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                            <td className="px-3 py-2 font-medium text-slate-700">{lead.nombre}</td>
+                            <td className="px-3 py-2 text-slate-400 text-xs font-mono">{lead.id}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
+              {/* Errores */}
+              {selectedImportacion.detalles_errores?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <Icon name="AlertCircle" size={18} className="text-red-500" />
+                    Errores/Advertencias ({selectedImportacion.detalles_errores.length})
+                  </h4>
+                  <div className="max-h-48 overflow-y-auto border border-red-200 rounded-lg bg-red-50">
+                    <ul className="p-3 space-y-1">
+                      {selectedImportacion.detalles_errores.map((err, i) => (
+                        <li key={i} className="text-sm text-red-700 flex items-start gap-2">
+                          <Icon name="ChevronRight" size={14} className="mt-0.5 flex-shrink-0" />
+                          {err}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// CSS para la animación (agregar a tu CSS global o en un style tag)
+// ============================================
+/*
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
   }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out;
+}
 
   // ============================================
   // COMPONENTES AUXILIARES
@@ -3920,3 +4291,4 @@ export default function Dashboard() {
     </div>
   )
 }
+*/
