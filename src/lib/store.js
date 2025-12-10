@@ -1859,8 +1859,43 @@ export function exportarReporteCSV(leads, incluirDetalles = false) {
 }
 
 // ============================================
-// IMPORTACIÓN DE DATOS
+// IMPORTACIÓN DE DATOS (CORREGIDA)
 // ============================================
+
+// Función auxiliar: Parsear línea CSV correctamente
+function parseCSVLine(line) {
+  const result = []
+  let current = ''
+  let inQuotes = false
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Escaped quote
+        current += '"'
+        i++
+      } else {
+        // Toggle quote mode
+        inQuotes = !inQuotes
+      }
+    } else if (char === ',' && !inQuotes) {
+      // End of field
+      result.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  
+  // Don't forget the last field
+  result.push(current.trim())
+  
+  return result
+}
+
+// Función principal: Importar leads desde CSV
 export function importarLeadsCSV(csvData, userId, mapeoColumnas = {}) {
   console.log('📥 Iniciando importación de CSV...')
   
@@ -2000,7 +2035,7 @@ export function importarLeadsCSV(csvData, userId, mapeoColumnas = {}) {
         carrera_id,
         medio_id,
         tipo_alumno: 'nuevo',
-        notas: notas || `Importado desde CSV`,
+        notas: notas || 'Importado desde CSV',
         origen_entrada: 'importacion'
       }, userId, 'keymaster')
       
@@ -2024,27 +2059,6 @@ export function importarLeadsCSV(csvData, userId, mapeoColumnas = {}) {
     duplicados: resultados.duplicados,
     errores: resultados.errores.length
   })
-  
-  return { success: true, ...resultados }
-}
-      
-      // Crear lead
-      createConsulta({
-        nombre,
-        email: email || '',
-        telefono: telefono || '',
-        carrera_id: carrera?.id || store.carreras[0].id,
-        medio_id: 'otro',
-        tipo_alumno: 'nuevo',
-        notas: limpiar(valores[mapeo.notas]) || `Importado desde CSV (línea ${i + 1})`,
-        origen_entrada: 'importacion'
-      }, userId, 'keymaster')
-      
-      resultados.importados++
-    } catch (err) {
-      resultados.errores.push(`Línea ${i + 1}: Error de formato`)
-    }
-  }
   
   return { success: true, ...resultados }
 }
