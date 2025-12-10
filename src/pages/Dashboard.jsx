@@ -3790,7 +3790,7 @@ const ConfigView = () => {
           </div>
         </div>
       )}
-      
+      */
       {/* ============================================ */}
       {/* MODAL DE DETALLES DE IMPORTACIÓN */}
       {/* ============================================ */}
@@ -3884,33 +3884,10 @@ const ConfigView = () => {
     </div>
   )
 }
+*/
+
 
 // ============================================
-// CSS para la animación (agregar a tu CSS global o en un style tag)
-// ============================================
-*/
-@keyframes bounce-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(0.9);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.animate-bounce-in {
-  animation: bounce-in 0.5s ease-out;
-}
-*/
-  // ============================================
   // COMPONENTES AUXILIARES
   // ============================================
   const StatCard = ({ title, value, icon, color, sub, onClick }) => {
