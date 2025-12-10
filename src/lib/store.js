@@ -23,7 +23,7 @@ import {
 } from '../data/mockData'
 
 const STORAGE_KEY = 'admitio_data'
-const STORAGE_VERSION = '2.5' // Incrementar cuando cambie la estructura
+const STORAGE_VERSION = '2.6' // Incrementar cuando cambie la estructura - Agregado historial importaciones
 
 // ============================================
 // INICIALIZACIÓN
@@ -61,6 +61,7 @@ function initStore() {
     cola_leads: COLA_LEADS_INICIAL,
     correos_enviados: CORREOS_ENVIADOS_INICIAL,
     notificaciones: [],
+    importaciones: [], // Historial de importaciones CSV
   }
   
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData))
@@ -2060,7 +2061,31 @@ export function importarLeadsCSV(csvData, userId, mapeoColumnas = {}) {
     errores: resultados.errores.length
   })
   
-  return { success: true, ...resultados }
+  // Registrar la importación en el historial
+  const usuario = store.usuarios.find(u => u.id === userId)
+  const registroImportacion = {
+    id: `imp_${Date.now()}`,
+    fecha: new Date().toISOString(),
+    usuario_id: userId,
+    usuario_nombre: usuario?.nombre || 'Sistema',
+    archivo: 'CSV importado',
+    total_procesados: lineas.length - 1,
+    importados: resultados.importados,
+    duplicados: resultados.duplicados,
+    errores: resultados.errores.length,
+    detalles_errores: resultados.errores.slice(0, 10), // Solo primeros 10 errores
+    leads_creados: resultados.detalles.map(d => ({ id: d.id, nombre: d.nombre }))
+  }
+  
+  if (!store.importaciones) {
+    store.importaciones = []
+  }
+  store.importaciones.unshift(registroImportacion) // Agregar al inicio
+  saveStore()
+  
+  console.log('📝 Importación registrada:', registroImportacion.id)
+  
+  return { success: true, ...resultados, registro: registroImportacion }
 }
 
 // ============================================
@@ -2076,6 +2101,50 @@ function formatTime(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
   return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+}
+
+// ============================================
+// HISTORIAL DE IMPORTACIONES
+// ============================================
+export function getHistorialImportaciones(limite = 20) {
+  if (!store.importaciones) {
+    store.importaciones = []
+  }
+  return store.importaciones.slice(0, limite)
+}
+
+export function getImportacionById(id) {
+  if (!store.importaciones) return null
+  return store.importaciones.find(i => i.id === id)
+}
+
+export function getEstadisticasImportaciones() {
+  if (!store.importaciones || store.importaciones.length === 0) {
+    return {
+      totalImportaciones: 0,
+      totalLeadsImportados: 0,
+      totalDuplicados: 0,
+      totalErrores: 0,
+      ultimaImportacion: null
+    }
+  }
+  
+  return {
+    totalImportaciones: store.importaciones.length,
+    totalLeadsImportados: store.importaciones.reduce((sum, i) => sum + i.importados, 0),
+    totalDuplicados: store.importaciones.reduce((sum, i) => sum + i.duplicados, 0),
+    totalErrores: store.importaciones.reduce((sum, i) => sum + i.errores, 0),
+    ultimaImportacion: store.importaciones[0]
+  }
+}
+
+export function eliminarRegistroImportacion(id) {
+  if (!store.importaciones) return false
+  const idx = store.importaciones.findIndex(i => i.id === id)
+  if (idx === -1) return false
+  store.importaciones.splice(idx, 1)
+  saveStore()
+  return true
 }
 
 // Importar para uso externo
