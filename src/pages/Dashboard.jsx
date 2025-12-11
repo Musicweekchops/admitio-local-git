@@ -3520,12 +3520,20 @@ const ConfigView = () => {
                 : 'bg-emerald-50 border border-emerald-200'
               : 'bg-red-50 border border-red-200'
           }`}>
-            if (result.success && result.importados > 0) {
-  setNotification({ 
-    type: 'success', 
-    message: `✅ ¡Importación exitosa! ${result.importados} leads importados${result.duplicados > 0 ? `, ${result.duplicados} duplicados omitidos` : ''}` 
-  })
-  setTimeout(() => setNotification(null), 5000)
+            {importResult.success ? (
+              importResult.importados === 0 ? (
+                <>
+                  <p className="font-medium text-amber-800 flex items-center gap-2">
+                    <Icon name="AlertTriangle" size={20} />
+                    No se importaron leads
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    {importResult.duplicados > 0 
+                      ? `Todos los ${importResult.duplicados} registros ya existen en la base de datos.`
+                      : 'El archivo no contenía datos válidos para importar.'}
+                  </p>
+                </>
+              ) : (
 }
                   <p className="font-medium text-amber-800 flex items-center gap-2">
                     <Icon name="AlertTriangle" size={20} />
