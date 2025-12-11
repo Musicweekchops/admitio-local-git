@@ -60,7 +60,6 @@ const NotasTextarea = ({ consulta, userId, onSaved }) => {
     </div>
   )
 }
-
 // Componente separado para el modal de nueva consulta (evita re-renders)
 const ModalNuevaConsulta = ({ isOpen, onClose, onCreated, isKeyMaster, userId, userRol }) => {
   const [formData, setFormData] = useState({
