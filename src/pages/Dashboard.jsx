@@ -3520,9 +3520,13 @@ const ConfigView = () => {
                 : 'bg-emerald-50 border border-emerald-200'
               : 'bg-red-50 border border-red-200'
           }`}>
-            {importResult.success ? (
-              importResult.importados === 0 ? (
-                <>
+            if (result.success && result.importados > 0) {
+  setNotification({ 
+    type: 'success', 
+    message: `✅ ¡Importación exitosa! ${result.importados} leads importados${result.duplicados > 0 ? `, ${result.duplicados} duplicados omitidos` : ''}` 
+  })
+  setTimeout(() => setNotification(null), 5000)
+}
                   <p className="font-medium text-amber-800 flex items-center gap-2">
                     <Icon name="AlertTriangle" size={20} />
                     No se importaron leads
