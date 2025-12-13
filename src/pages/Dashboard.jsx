@@ -60,6 +60,7 @@ const NotasTextarea = ({ consulta, userId, onSaved }) => {
     </div>
   )
 }
+
 // Componente separado para el modal de nueva consulta (evita re-renders)
 const ModalNuevaConsulta = ({ isOpen, onClose, onCreated, isKeyMaster, userId, userRol }) => {
   const [formData, setFormData] = useState({
@@ -3522,18 +3523,6 @@ const ConfigView = () => {
             {importResult.success ? (
               importResult.importados === 0 ? (
                 <>
-                  <p className="font-medium text-amber-800 flex items-center gap-2">
-                    <Icon name="AlertTriangle" size={20} />
-                    No se importaron leads
-                  </p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    {importResult.duplicados > 0 
-                      ? `Todos los ${importResult.duplicados} registros ya existen en la base de datos.`
-                      : 'El archivo no contenía datos válidos para importar.'}
-                  </p>
-                </>
-              ) : (
-}
                   <p className="font-medium text-amber-800 flex items-center gap-2">
                     <Icon name="AlertTriangle" size={20} />
                     No se importaron leads
