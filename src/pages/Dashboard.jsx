@@ -3332,7 +3332,7 @@ const ConfigView = () => {
     setEstadisticasImport(store.getEstadisticasImportaciones())
   }
   
-  const handleImportCSV = async () => {
+const handleImportCSV = async () => {
     if (!importFile) return
     
     setImporting(true)
@@ -3348,9 +3348,14 @@ const ConfigView = () => {
       setImporting(false)
       
       if (result.success && result.importados > 0) {
-        setShowSuccessModal(true)
-        cargarHistorial() // Actualizar historial
-        loadData() // Recargar datos del dashboard
+        // Notificación de éxito
+        setNotification({ 
+          type: 'success', 
+          message: `✅ ${result.importados} leads importados correctamente${result.duplicados > 0 ? ` (${result.duplicados} duplicados omitidos)` : ''}` 
+        })
+        setTimeout(() => setNotification(null), 5000)
+        cargarHistorial()
+        loadData()
       }
     }
     
@@ -3360,8 +3365,7 @@ const ConfigView = () => {
     }
     
     reader.readAsText(importFile)
-  }
-  
+}
   const descargarPlantilla = () => {
     const plantilla = `nombre,email,telefono,carrera,notas
 "Juan Pérez","juan@email.com","+56912345678","Guitarra Eléctrica","Interesado en clases presenciales"
