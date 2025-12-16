@@ -10,7 +10,6 @@
   },
  "dependencies": {
   "@supabase/supabase-js": "^2.39.0",
-  ...
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
